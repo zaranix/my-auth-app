@@ -2,15 +2,22 @@ version: '3.8'
 
 services:
   app:
+    container_name: app
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
 
   tests:
+    container_name: testsdock
     build:
       context: .
       dockerfile: Dockerfile.test

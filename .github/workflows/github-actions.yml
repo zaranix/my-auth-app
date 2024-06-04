@@ -4,8 +4,26 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Build the stack
-        run: docker-compose up -d
-      - name: Test
-        run: docker run --network container:webapp-frontend appropriate/curl -s --retry 10 --retry-connrefused http://localhost:5000/
+      - uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: docker compose build
+
+      - name: Start app service
+        run: docker compose up -d app
+
+      - name: Wait till app service to be healthy
+        run: | 
+         TIMEOUT=300
+          while ! docker inspect --format '{{.State.Health.Status}}' $(docker-compose ps -q app) | grep -q 'healthy'; do
+            sleep 1;
+            TIMEOUT=$((TIMEOUT-1))
+            if [ $TIMEOUT -le 0 ]; then
+              echo "App service did not become healthy in time" >&2
+              docker-compose logs app
+              exit 1
+            fi
+          done
+      - name: Run tests
+        run: |
+          docker compose run --rm tests
